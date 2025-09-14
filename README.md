@@ -28,10 +28,16 @@ This project is a Django-based Stationary Management System designed to handle i
 ## Setup Instructions
 1. Clone the repository
 2. Create a virtual environment and activate it:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+   - **Linux/macOS**:
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
+   - **Windows**:
+     ```cmd
+     python -m venv venv
+     venv\Scripts\activate
+     ```
 3. Install dependencies:
    ```bash
    pip install -r requirements/base.txt
@@ -53,8 +59,6 @@ pip install -r requirements/base.txt
 ```
 To add new dependencies, update `requirements/base.txt` and re-run the install command.
 
-## License
-Specify your license here.
 
 ## Contact
-Add contact information or links for support.
+E-mail:rachit300poudel@gmail.com
