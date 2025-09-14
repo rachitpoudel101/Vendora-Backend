@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -140,81 +141,6 @@ class Productstock(models.Model):
     def soft_delete(self):
         self.is_deleted = True
         self.save()
-
-    @property
-    def is_expired(self):
-        return self.expires_at and self.expires_at <= timezone.now()
-
-    def clean(self):
-        # Cost and margin validation
-        if self.cost_price is not None and self.cost_price < 0:
-            raise ValidationError("Cost price cannot be negative.")
-        if self.margin is not None and self.margin < 0:
-            raise ValidationError("Margin cannot be negative.")
-
-        # Serial number uniqueness validation (when provided)
-        if self.serial_number:
-            existing_serial = Productstock.objects.filter(
-                serial_number=self.serial_number, is_deleted=False
-            ).exclude(pk=self.pk if self.pk else None)
-
-            if existing_serial.exists():
-                raise ValidationError(
-                    {"serial_number": "This serial number already exists."}
-                )
-
-        # Expiry validation based on category
-        if (
-            self.category
-            and self.category.is_expired_applicable
-            and not self.expires_at
-        ):
-            raise ValidationError(
-                {
-                    "expires_at": "This product must have an expiry date because its category is expired applicable."
-                }
-            )
-
-        # If category is not expired applicable, clear product expiry
-        if self.category and not self.category.is_expired_applicable:
-            self.expires_at = None
-
-    def generate_batch_number(self):
-        """Generate batch number in format YYYYMMDD-XXX where XXX is sequential counter"""
-        from datetime import datetime
-
-        today = datetime.now()
-        date_prefix = today.strftime("%Y%m%d")
-
-        # Find existing batch numbers for today
-        existing_batches = Productstock.objects.filter(
-            batch_number__startswith=date_prefix, is_deleted=False
-        ).exclude(pk=self.pk if self.pk else None)
-
-        # Generate next sequential number
-        if existing_batches.exists():
-            # Extract the highest counter for today
-            counters = []
-            for batch in existing_batches:
-                try:
-                    counter_part = batch.batch_number.split("-")[-1]
-                    counters.append(int(counter_part))
-                except (ValueError, IndexError):
-                    continue
-
-            next_counter = max(counters) + 1 if counters else 1
-        else:
-            next_counter = 1
-
-        return f"{date_prefix}-{next_counter:03d}"
-
-    def save(self, *args, **kwargs):
-        if not self.batch_number:
-            self.batch_number = self.generate_batch_number()
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name
 
 
 class UnitTypeConfigurations(models.Model):

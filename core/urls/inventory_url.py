@@ -4,8 +4,8 @@ from rest_framework.routers import DefaultRouter
 from core.apps.inventory.views import (
     CategoryViewSet,
     ProductViewSet,
-    UnitTypeViewSet,
     UnitTypeConfigurationsViewSet,
+    UnitTypeViewSet,
 )
 
 router = DefaultRouter()

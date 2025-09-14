@@ -22,10 +22,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from core.urls.inventory_url import urlpatterns as inventory_patterns
 from core.urls.urls_billing import urlpatterns as billing_partterns

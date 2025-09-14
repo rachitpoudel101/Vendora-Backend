@@ -1,6 +1,6 @@
-from rest_framework import viewsets, status
-from rest_framework.response import Response
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from core.apps.inventory.models import (
     Category,
@@ -11,8 +11,8 @@ from core.apps.inventory.models import (
 from core.apps.inventory.serializers.serializers import (
     CategorySerializer,
     ProductStockSerializer,
-    UnitTypeSerializer,
     UnitTypeConfigurationsSerializer,
+    UnitTypeSerializer,
 )
 from core.apps.users.permissions.permissions import IsAdmin, IsSuperAdmin
 
@@ -103,6 +103,82 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(supliers_id=supliers)
 
         return queryset
+
+    @action(detail=True, methods=["post"], url_path="validate")
+    def validate_product(self, request, pk=None):
+        """
+        Custom action to validate a product and generate batch number.
+        """
+        product = self.get_object()
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+
+        errors = {}
+
+        # Expiry check
+        is_expired = product.expires_at and product.expires_at <= timezone.now()
+
+        # Cost and margin validation
+        if product.cost_price is not None and product.cost_price < 0:
+            errors["cost_price"] = "Cost price cannot be negative."
+        if product.margin is not None and product.margin < 0:
+            errors["margin"] = "Margin cannot be negative."
+
+        # Serial number uniqueness validation
+        if product.serial_number:
+            existing_serial = Productstock.objects.filter(
+                serial_number=product.serial_number, is_deleted=False
+            ).exclude(pk=product.pk if product.pk else None)
+            if existing_serial.exists():
+                errors["serial_number"] = "This serial number already exists."
+
+        # Expiry validation based on category
+        if (
+            product.category
+            and product.category.is_expired_applicable
+            and not product.expires_at
+        ):
+            errors["expires_at"] = (
+                "This product must have an expiry date because its category is expired applicable."
+            )
+        if product.category and not product.category.is_expired_applicable:
+            product.expires_at = None
+
+        # Batch number generation
+        def generate_batch_number(product):
+            from datetime import datetime
+
+            today = datetime.now()
+            date_prefix = today.strftime("%Y%m%d")
+            existing_batches = Productstock.objects.filter(
+                batch_number__startswith=date_prefix, is_deleted=False
+            ).exclude(pk=product.pk if product.pk else None)
+            if existing_batches.exists():
+                counters = []
+                for batch in existing_batches:
+                    try:
+                        counter_part = batch.batch_number.split("-")[-1]
+                        counters.append(int(counter_part))
+                    except (ValueError, IndexError):
+                        continue
+                next_counter = max(counters) + 1 if counters else 1
+            else:
+                next_counter = 1
+            return f"{date_prefix}-{next_counter:03d}"
+
+        if not product.batch_number:
+            product.batch_number = generate_batch_number(product)
+            product.save()
+
+        if errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "is_expired": is_expired,
+                "batch_number": product.batch_number,
+                "message": "Product validated successfully.",
+            }
+        )
 
 
 class UnitTypeConfigurationsViewSet(viewsets.ModelViewSet):
