@@ -108,19 +108,6 @@ class ProductStockSerializer(serializers.ModelSerializer):
             )
         return data
 
-    def get_category_name(self, obj):
-        return (
-            obj.category.name if obj.category and not obj.category.is_deleted else None
-        )
-
-    def get_supliers_name(self, obj):
-        return (
-            obj.supliers.name if obj.supliers and not obj.supliers.is_deleted else None
-        )
-
-    def get_unit_name(self, obj):
-        return obj.unit.unit if obj.unit else None
-
 
 class UnitTypeConfigurationsSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
