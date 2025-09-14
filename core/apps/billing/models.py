@@ -39,7 +39,7 @@ class BillingItem(models.Model):
     product_id = models.ForeignKey(
         Productstock, on_delete=models.CASCADE, related_name="products_bill", null=True
     )
-    quantity = models.IntegerField()
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     unit_total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)

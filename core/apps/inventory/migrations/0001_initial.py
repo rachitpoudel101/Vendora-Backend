@@ -11,68 +11,198 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('Supliers', '0001_initial'),
+        ("Supliers", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('is_expired_applicable', models.BooleanField(default=False)),
-                ('is_deleted', models.BooleanField(default=False)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                ("is_expired_applicable", models.BooleanField(default=False)),
+                ("is_deleted", models.BooleanField(default=False)),
             ],
             options={
-                'db_table': 'category',
+                "db_table": "category",
             },
         ),
         migrations.CreateModel(
-            name='UnitType',
+            name="UnitType",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('unit', models.CharField(max_length=15)),
-                ('description', models.TextField(blank=True, null=True)),
-                ('is_deleted', models.BooleanField(default=False)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("unit", models.CharField(max_length=15)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("is_deleted", models.BooleanField(default=False)),
             ],
             options={
-                'db_table': 'unit_type',
+                "db_table": "unit_type",
             },
         ),
         migrations.CreateModel(
-            name='Productstock',
+            name="Productstock",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('product_code', models.CharField(blank=True, max_length=100, null=True, unique=True)),
-                ('batch_number', models.CharField(blank=True, max_length=100, null=True)),
-                ('serial_number', models.CharField(blank=True, max_length=100, null=True)),
-                ('cost_price', models.DecimalField(decimal_places=2, max_digits=10, validators=[django.core.validators.MinValueValidator(Decimal('0.00'))])),
-                ('stock', models.DecimalField(decimal_places=2, max_digits=5, validators=[django.core.validators.MinValueValidator(0)])),
-                ('margin', models.DecimalField(decimal_places=2, max_digits=5, validators=[django.core.validators.MinValueValidator(Decimal('0.00'))])),
-                ('expires_at', models.DateTimeField(blank=True, null=True)),
-                ('is_deleted', models.BooleanField(default=False)),
-                ('category', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='products', to='inventory.category')),
-                ('supliers', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='products', to='Supliers.supliers')),
-                ('base_unit', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='products_base_unit', to='inventory.unittype')),
-                ('unit', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='inventory.unittype')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                (
+                    "product_code",
+                    models.CharField(
+                        blank=True, max_length=100, null=True, unique=True
+                    ),
+                ),
+                (
+                    "batch_number",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
+                (
+                    "serial_number",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
+                (
+                    "cost_price",
+                    models.DecimalField(
+                        decimal_places=2,
+                        max_digits=10,
+                        validators=[
+                            django.core.validators.MinValueValidator(Decimal("0.00"))
+                        ],
+                    ),
+                ),
+                (
+                    "stock",
+                    models.DecimalField(
+                        decimal_places=2,
+                        max_digits=5,
+                        validators=[django.core.validators.MinValueValidator(0)],
+                    ),
+                ),
+                (
+                    "margin",
+                    models.DecimalField(
+                        decimal_places=2,
+                        max_digits=5,
+                        validators=[
+                            django.core.validators.MinValueValidator(Decimal("0.00"))
+                        ],
+                    ),
+                ),
+                ("expires_at", models.DateTimeField(blank=True, null=True)),
+                ("is_deleted", models.BooleanField(default=False)),
+                (
+                    "category",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="products",
+                        to="inventory.category",
+                    ),
+                ),
+                (
+                    "supliers",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="products",
+                        to="Supliers.supliers",
+                    ),
+                ),
+                (
+                    "base_unit",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="products_base_unit",
+                        to="inventory.unittype",
+                    ),
+                ),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="inventory.unittype",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'product_stock',
+                "db_table": "product_stock",
             },
         ),
         migrations.CreateModel(
-            name='UnitTypeConfigurations',
+            name="UnitTypeConfigurations",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('conversion_per_unit', models.DecimalField(decimal_places=2, default=1, max_digits=10)),
-                ('is_deleted', models.BooleanField(default=False)),
-                ('conversion_unit_name', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='conversion_unit_configurations', to='inventory.unittype')),
-                ('product', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='inventory.productstock')),
-                ('unit_type', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='configUnit_type', to='inventory.unittype')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "conversion_per_unit",
+                    models.DecimalField(decimal_places=2, default=1, max_digits=10),
+                ),
+                ("is_deleted", models.BooleanField(default=False)),
+                (
+                    "conversion_unit_name",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="conversion_unit_configurations",
+                        to="inventory.unittype",
+                    ),
+                ),
+                (
+                    "product",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="inventory.productstock",
+                    ),
+                ),
+                (
+                    "unit_type",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="configUnit_type",
+                        to="inventory.unittype",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'unit_configurations',
+                "db_table": "unit_configurations",
             },
         ),
     ]

@@ -30,7 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "10.2.2.78",
-    # '192.168.1.104'
+    "192.168.1.104",
 ]
 
 
@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "debug_toolbar",
-    'django_extensions',
+    "django_extensions",
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
@@ -76,6 +76,7 @@ AUTH_USER_MODEL = "users.Users"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://10.2.2.78:5173",
+    "http://192.168.1.10:5173",
 ]
 
 INTERNAL_IPS = [
