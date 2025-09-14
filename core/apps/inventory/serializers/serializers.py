@@ -109,8 +109,6 @@ class ProductStockSerializer(serializers.ModelSerializer):
         return data
 
 
-
-
 class UnitTypeConfigurationsSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     unit_type_name = serializers.CharField(source="unit_type.unit", read_only=True)

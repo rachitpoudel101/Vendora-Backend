@@ -24,6 +24,7 @@ class BillingItemSerializer(serializers.ModelSerializer):
             "unit_total",
         ]
 
+
 class BillSerializer(serializers.ModelSerializer):
     items = BillingItemSerializer(
         many=True, source="bill_items"

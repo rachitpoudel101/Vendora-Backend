@@ -51,7 +51,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return data
 
 
-
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField(required=True)
 
