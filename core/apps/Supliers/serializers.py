@@ -22,12 +22,10 @@ class SupliersCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return Supliers.objects.create(**validated_data)
 
-
     # def validate_name(self, value):
     #     if Supliers.objects.filter(name=value, is_deleted=False).exists():
     #         raise serializers.ValidationError("Supliers with this name already exists.")
     #     return value
-
 
     # def update(self, instance, validated_data):
     #     for attr, value in validated_data.items():

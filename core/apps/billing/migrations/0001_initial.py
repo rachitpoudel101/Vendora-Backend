@@ -10,43 +10,112 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('inventory', '0001_initial'),
+        ("inventory", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Bill',
+            name="Bill",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('customer_Name', models.CharField(default=None, max_length=50)),
-                ('date', models.DateField(auto_now_add=True)),
-                ('payment_method', models.CharField(choices=[('cash', 'Cash'), ('online', 'Online')], max_length=50)),
-                ('actual_amount', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('bill_discount', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('tax_amount', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('vat_amount', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('recived_amount', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('grand_total', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('billed_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='bills', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("customer_Name", models.CharField(default=None, max_length=50)),
+                ("date", models.DateField(auto_now_add=True)),
+                (
+                    "payment_method",
+                    models.CharField(
+                        choices=[("cash", "Cash"), ("online", "Online")], max_length=50
+                    ),
+                ),
+                (
+                    "actual_amount",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                (
+                    "bill_discount",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                (
+                    "tax_amount",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                (
+                    "vat_amount",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                (
+                    "recived_amount",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                ("grand_total", models.DecimalField(decimal_places=2, max_digits=12)),
+                (
+                    "billed_by",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="bills",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'db_table': 'bill',
+                "db_table": "bill",
             },
         ),
         migrations.CreateModel(
-            name='BillingItem',
+            name="BillingItem",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.IntegerField()),
-                ('unit_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('discount_amount', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
-                ('unit_total', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('bill_id', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='bill_items', to='billing.bill')),
-                ('product_id', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='products_bill', to='inventory.productstock')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("quantity", models.IntegerField()),
+                (
+                    "unit_price",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                (
+                    "discount_amount",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=10),
+                ),
+                (
+                    "unit_total",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                (
+                    "bill_id",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="bill_items",
+                        to="billing.bill",
+                    ),
+                ),
+                (
+                    "product_id",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="products_bill",
+                        to="inventory.productstock",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'billing_Items',
+                "db_table": "billing_Items",
             },
         ),
     ]

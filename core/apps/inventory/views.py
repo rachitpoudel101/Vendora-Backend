@@ -135,11 +135,3 @@ class UnitTypeConfigurationsViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(unit_type_id=unit_type)
 
         return queryset
-
-    @action(detail=True, methods=["post"], url_path="reduce-stock")
-    def reduce_stock(self, request, pk=None):
-        """
-        Custom action to reduce stock for a specific unit configuration.
-        Reduces stock from the associated product based on unit conversion.
-        """
-        
