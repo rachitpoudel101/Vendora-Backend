@@ -1,6 +1,6 @@
-# Stationary Management System
+# Vendora
 
-This project is a Django-based Stationary Management System designed to handle inventory, billing, user management, notifications, and supplier management for a stationary business.
+This project is a Django-based ERP Driven Inventory Management System designed to handle inventory, billing, user management, notifications, and supplier management for a stationary business.
 
 ## Project Structure
 
