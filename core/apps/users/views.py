@@ -44,6 +44,47 @@ class UserViewSet(viewsets.ModelViewSet):
             status=status.HTTP_204_NO_CONTENT,
         )
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        user = Users.objects.create_user(
+            username=validated_data["username"],
+            role=validated_data["role"],
+            email=validated_data.get("email", ""),
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+        )
+        user.set_password(validated_data.get("password"))
+        if user.role == Users.RolesChoices.STAFF:
+            user.is_staff = True
+        user.save()
+        output_serializer = self.get_serializer(user)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        for attr, value in validated_data.items():
+            if attr == "password":
+                continue
+            setattr(instance, attr, value)
+        password = validated_data.get("password")
+        if password:
+            instance.set_password(password)
+        if instance.role == Users.RolesChoices.STAFF:
+            instance.is_staff = True
+        elif instance.role == Users.RolesChoices.ADMIN:
+            instance.is_staff = True
+        else:
+            instance.is_staff = False
+        instance.save()
+        output_serializer = self.get_serializer(instance)
+        return Response(output_serializer.data)
+
 
 class SelfDetails(ListAPIView):
     queryset = Users.objects.all()

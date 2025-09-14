@@ -50,42 +50,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 )
         return data
 
-    def create(self, validated_data):
-        user = Users.objects.create_user(
-            username=validated_data["username"],
-            role=validated_data["role"],
-            email=validated_data.get("email", ""),
-            first_name=validated_data.get("first_name", ""),
-            last_name=validated_data.get("last_name", ""),
-        )
-        user.set_password(validated_data.get("password"))
-        if user.role == Users.RolesChoices.STAFF:
-            user.is_staff = True
-        user.save()
-        return user
-
-    def update(self, instance, validated_data):
-        # Update normal fields
-        for attr, value in validated_data.items():
-            if attr == "password":
-                continue  # handle separately
-            setattr(instance, attr, value)
-
-        # Update password properly
-        password = validated_data.get("password")
-        if password:
-            instance.set_password(password)
-
-        # Ensure staff flag aligns with role
-        if instance.role == Users.RolesChoices.STAFF:
-            instance.is_staff = True
-        elif instance.role == Users.RolesChoices.ADMIN:
-            instance.is_staff = True  # admins are staff too
-        else:
-            instance.is_staff = False
-
-        instance.save()
-        return instance
 
 
 class LogoutSerializer(serializers.Serializer):

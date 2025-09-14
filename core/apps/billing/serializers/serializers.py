@@ -24,12 +24,6 @@ class BillingItemSerializer(serializers.ModelSerializer):
             "unit_total",
         ]
 
-    # def to_representation(self, instance):
-    #     rep = super().to_representation(instance)
-    #     rep['product_name'] = ProductStockSerializer(instance.product_name).data
-    #     return rep
-
-
 class BillSerializer(serializers.ModelSerializer):
     items = BillingItemSerializer(
         many=True, source="bill_items"
@@ -51,39 +45,3 @@ class BillSerializer(serializers.ModelSerializer):
             "grand_total",
             "items",
         ]
-
-    def create(self, validated_data):
-        items_data = validated_data.pop(
-            "bill_items", []
-        )  # changed from 'bill' to 'bill_items'
-        bill = Bill.objects.create(**validated_data)
-        for item_data in items_data:
-            product = item_data["product_id"]
-            quantity = item_data["quantity"]
-            if quantity < 0:
-                raise ValidationError("Quantity cannot be negative.")
-            if product.stock < quantity:
-                raise ValidationError(
-                    f"Not enough stock for product '{product.name}'. Available: {product.stock}, Requested: {quantity}"
-                )
-            product.stock -= quantity
-            if product.stock < 0:
-                raise ValidationError(
-                    f"Stock for product '{product.name}' cannot be negative after billing."
-                )
-            product.save()
-            if (
-                item_data.get("unit_price", 0) < 0
-                or item_data.get("selling_price", 0) < 0
-                or item_data.get("discount_amount", 0) < 0
-                or item_data.get("unit_total", 0) < 0
-            ):
-                raise ValidationError("Amounts cannot be negative.")
-            item_data.pop("bill_id", None)
-            BillingItem.objects.create(bill_id=bill, **item_data)
-        return bill
-
-    # def to_representation(self, instance):
-    #     rep = super().to_representation(instance)
-    #     rep['items'] = BillingItemSerializer(instance.bill.all(), many=True).data
-    #     return rep
