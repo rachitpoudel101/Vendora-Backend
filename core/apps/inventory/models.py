@@ -154,7 +154,7 @@ class UnitTypeConfigurations(models.Model):
         blank=True,
         help_text="Product for which this configuration applies.",
     )
-    unit_type = models.ForeignKey(
+    base_unit = models.ForeignKey(
         UnitType,
         on_delete=models.CASCADE,
         null=True,
