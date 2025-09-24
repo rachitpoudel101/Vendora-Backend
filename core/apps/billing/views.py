@@ -1,4 +1,5 @@
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.response import Response
 
 from core.apps.billing.models import Bill
 from core.apps.billing.serializers.serializers import BillSerializer
@@ -48,7 +49,4 @@ class BillViewSet(viewsets.ModelViewSet):
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
     def _error_response(self, message):
-        from rest_framework import status
-        from rest_framework.response import Response
-
         return Response({"error": message}, status=status.HTTP_400_BAD_REQUEST)

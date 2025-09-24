@@ -159,7 +159,7 @@ class UnitTypeConfigurations(models.Model):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name="configUnit_type",
+        related_name="configurations",
         help_text="Unit type for conversion.",
     )
     conversion_per_unit = models.DecimalField(
@@ -186,4 +186,4 @@ class UnitTypeConfigurations(models.Model):
         self.save()
 
     def __str__(self):
-        return f"{self.conversion_per_unit} {self.unit_type.unit if self.unit_type else 'Unknown'}"
+        return f"{self.conversion_per_unit} {self.base_unit.unit if self.base_unit else 'Unknown'}"

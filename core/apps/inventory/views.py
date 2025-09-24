@@ -221,6 +221,6 @@ class UnitTypeConfigurationsViewSet(viewsets.ModelViewSet):
         if product:
             queryset = queryset.filter(product_id=product)
         if unit_type:
-            queryset = queryset.filter(unit_type_id=unit_type)
+            queryset = queryset.filter(base_unit_id=unit_type)
 
         return queryset
