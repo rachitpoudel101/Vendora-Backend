@@ -102,21 +102,27 @@ class ProductStockSerializer(serializers.ModelSerializer):
             "stock": {"required": True},
             "category": {"required": True},
             "unit": {"required": True},
-            "base_unit": {"required": True},  # Made base_unit required
+            "base_unit": {"required": False, "allow_null": True},
             "serial_number": {"required": False},
         }
 
+    def validate_unit(self, value):
+        """Validate unit field"""
+        if not value:
+            raise serializers.ValidationError("Unit is required for the product.")
+        return value
+
     def validate(self, data):
-        unit = data.get("unit")
-        if not unit:
+        # Check if unit exists
+        if not data.get("unit"):
             raise serializers.ValidationError(
                 {"unit": "Unit is required for the product."}
             )
-        base_unit = data.get("base_unit")
-        if not base_unit:
-            raise serializers.ValidationError(
-                {"base_unit": "Base unit is required for the product."}
-            )
+        
+        # If base_unit is not provided, default it to unit
+        if not data.get("base_unit"):
+            data["base_unit"] = data.get("unit")
+        
         return data
 
     def get_category_name(self, obj):
