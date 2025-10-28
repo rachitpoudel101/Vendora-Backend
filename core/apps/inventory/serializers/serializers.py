@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
+from datetime import datetime
 
 from core.apps.inventory.models import (
     Category,
@@ -92,8 +93,8 @@ class ProductStockSerializer(serializers.ModelSerializer):
             "unit_name",
             "base_unit_name",
             "is_expired",
-            "batch_number",
             "expires_at",
+            "batch_number",
         ]
         extra_kwargs = {
             "supliers": {"required": True},
@@ -156,6 +157,40 @@ class ProductStockSerializer(serializers.ModelSerializer):
             and not getattr(obj.base_unit, "is_deleted", False)
             else None
         )
+
+    def generate_batch_number(self):
+        """Generate unique batch number with format YYYYMMDD-XXX"""
+        today = datetime.now()
+        date_prefix = today.strftime("%Y%m%d")
+        
+        existing_batches = Productstock.objects.filter(
+            batch_number__startswith=date_prefix, is_deleted=False
+        )
+        
+        if existing_batches.exists():
+            counters = []
+            for batch in existing_batches:
+                try:
+                    counter_part = batch.batch_number.split("-")[-1]
+                    counters.append(int(counter_part))
+                except (ValueError, IndexError):
+                    continue
+            next_counter = max(counters) + 1 if counters else 1
+        else:
+            next_counter = 1
+        
+        return f"{date_prefix}-{next_counter:03d}"
+
+    def create(self, validated_data):
+        """Override create to auto-generate batch_number"""
+        validated_data['batch_number'] = self.generate_batch_number()
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        """Override update to generate new batch_number if not exists"""
+        if not instance.batch_number:
+            validated_data['batch_number'] = self.generate_batch_number()
+        return super().update(instance, validated_data)
 
 
 class UnitTypeConfigurationsSerializer(serializers.ModelSerializer):
