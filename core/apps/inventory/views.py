@@ -107,7 +107,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="validate")
     def validate_product(self, request, pk=None):
         """
-        Custom action to validate a product and generate batch number.
+        Custom action to validate a product.
         """
         product = self.get_object()
         from django.core.exceptions import ValidationError
@@ -143,32 +143,6 @@ class ProductViewSet(viewsets.ModelViewSet):
             )
         if product.category and not product.category.is_expired_applicable:
             product.expires_at = None
-
-        # Batch number generation
-        def generate_batch_number(product):
-            from datetime import datetime
-
-            today = datetime.now()
-            date_prefix = today.strftime("%Y%m%d")
-            existing_batches = Productstock.objects.filter(
-                batch_number__startswith=date_prefix, is_deleted=False
-            ).exclude(pk=product.pk if product.pk else None)
-            if existing_batches.exists():
-                counters = []
-                for batch in existing_batches:
-                    try:
-                        counter_part = batch.batch_number.split("-")[-1]
-                        counters.append(int(counter_part))
-                    except (ValueError, IndexError):
-                        continue
-                next_counter = max(counters) + 1 if counters else 1
-            else:
-                next_counter = 1
-            return f"{date_prefix}-{next_counter:03d}"
-
-        if not product.batch_number:
-            product.batch_number = generate_batch_number(product)
-            product.save()
 
         if errors:
             return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
