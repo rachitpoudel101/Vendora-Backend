@@ -29,8 +29,8 @@ SECRET_KEY = "django-insecure-emowb9@xw0#ws#ay67d@yx+%*+9@$+bjl#6=p5!da(ip174ad(
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "10.2.2.78",
-    "192.168.1.104",
+    # "10.2.2.78",
+    # "192.168.1.104",
     "*",
 ]
 
@@ -135,7 +135,7 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.mysql",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": config("DB_NAME"),
         "USER": config("DB_USER"),
         "PASSWORD": config("DB_PASSWORD"),

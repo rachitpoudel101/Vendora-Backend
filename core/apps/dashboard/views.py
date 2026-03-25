@@ -20,7 +20,7 @@ def dashboard_stats(request):
         ]
         or 0
     )
-    
+
     # Total Profit: sum of (unit_price - cost_price) * quantity for all billing items
     total_profit = (
         BillingItem.objects.select_related("product_id")

@@ -110,7 +110,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         Custom action to validate a product.
         """
         product = self.get_object()
-        from django.core.exceptions import ValidationError
         from django.utils import timezone
 
         errors = {}

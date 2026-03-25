@@ -1,4 +1,5 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.response import Response
 
 from core.apps.billing.models import Bill
 from core.apps.billing.serializers.serializers import BillSerializer
@@ -15,7 +16,6 @@ class BillViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
         items_data = validated_data.pop("bill_items", [])
-        from django.core.exceptions import ValidationError
 
         from core.apps.billing.models import BillingItem
 
@@ -48,7 +48,4 @@ class BillViewSet(viewsets.ModelViewSet):
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
     def _error_response(self, message):
-        from rest_framework import status
-        from rest_framework.response import Response
-
         return Response({"error": message}, status=status.HTTP_400_BAD_REQUEST)

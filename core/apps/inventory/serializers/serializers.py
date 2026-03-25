@@ -119,11 +119,11 @@ class ProductStockSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"unit": "Unit is required for the product."}
             )
-        
+
         # If base_unit is not provided, default it to unit
         if not data.get("base_unit"):
             data["base_unit"] = data.get("unit")
-        
+
         return data
 
     def get_category_name(self, obj):
@@ -162,11 +162,11 @@ class ProductStockSerializer(serializers.ModelSerializer):
         """Generate unique batch number with format YYYYMMDD-XXX"""
         today = datetime.now()
         date_prefix = today.strftime("%Y%m%d")
-        
+
         existing_batches = Productstock.objects.filter(
             batch_number__startswith=date_prefix, is_deleted=False
         )
-        
+
         if existing_batches.exists():
             counters = []
             for batch in existing_batches:
@@ -178,18 +178,18 @@ class ProductStockSerializer(serializers.ModelSerializer):
             next_counter = max(counters) + 1 if counters else 1
         else:
             next_counter = 1
-        
+
         return f"{date_prefix}-{next_counter:03d}"
 
     def create(self, validated_data):
         """Override create to auto-generate batch_number"""
-        validated_data['batch_number'] = self.generate_batch_number()
+        validated_data["batch_number"] = self.generate_batch_number()
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
         """Override update to generate new batch_number if not exists"""
         if not instance.batch_number:
-            validated_data['batch_number'] = self.generate_batch_number()
+            validated_data["batch_number"] = self.generate_batch_number()
         return super().update(instance, validated_data)
 
 
