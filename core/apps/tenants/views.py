@@ -24,6 +24,50 @@ class TenantViewSet(viewsets.ModelViewSet):
             return Tenant.objects.filter(id=self.request.user.tenant.id)
         return Tenant.objects.none()
 
+    def destroy(self, request, *args, **kwargs):
+        """Delete a tenant - only superusers allowed"""
+        # Only superusers can delete tenants
+        is_super = request.user.is_superuser or getattr(request.user, "is_super", False)
+        if not is_super:
+            return Response(
+                {"error": "Only superadmin can delete tenants"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def create(self, request, *args, **kwargs):
+        """Create a tenant - only superusers allowed"""
+        # Only superusers can create tenants
+        is_super = request.user.is_superuser or getattr(request.user, "is_super", False)
+        if not is_super:
+            return Response(
+                {"error": "Only superadmin can create tenants"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        """Update a tenant - only superusers or tenant admin can update their own"""
+        instance = self.get_object()
+        is_super = request.user.is_superuser or getattr(request.user, "is_super", False)
+        
+        # Superusers can update any tenant
+        if is_super:
+            return super().update(request, *args, **kwargs)
+        
+        # Tenant admins can only update their own tenant
+        if hasattr(request.user, "tenant") and request.user.tenant == instance:
+            return super().update(request, *args, **kwargs)
+        
+        return Response(
+            {"error": "You can only update your own tenant"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     @action(detail=False, methods=["get"])
     def current(self, request):
         """Get current tenant from request"""
