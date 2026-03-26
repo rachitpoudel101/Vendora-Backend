@@ -2,28 +2,71 @@ import calendar
 from datetime import timedelta
 
 from django.db import models
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.http import require_GET
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from core.apps.billing.models import BillingItem
 from core.apps.dashboard.serializers import DashboardStatsSerializer
 from core.apps.inventory.models import Productstock
 
 
-@require_GET
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def dashboard_stats(request):
+    """Get dashboard statistics filtered by current tenant"""
+
+    # Get current tenant - first try from middleware, then from user
+    tenant = getattr(request, "tenant", None)
+
+    # If no tenant from middleware, try to get from authenticated user
+    if not tenant and request.user and request.user.is_authenticated:
+        tenant = getattr(request.user, "tenant", None)
+
+    # If still no tenant, return empty stats
+    if not tenant:
+        empty_data = {
+            "total_sales": 0,
+            "total_profit": 0,
+            "total_stocks": 0,
+            "products": [],
+            "profit_daily": 0,
+            "profit_weekly": 0,
+            "profit_monthly": 0,
+            "profit_yearly": 0,
+            "weekly_profit_by_day": [],
+            "monthly_profit_by_date": [],
+            "yearly_profit_by_month": [],
+            "sales_daily": 0,
+            "sales_weekly": 0,
+            "sales_monthly": 0,
+            "sales_yearly": 0,
+            "weekly_sales_by_day": [],
+            "monthly_sales_by_date": [],
+            "yearly_sales_by_month": [],
+            "week_top_product": None,
+            "month_top_product": None,
+            "year_top_product": None,
+        }
+        serializer = DashboardStatsSerializer(empty_data)
+        return Response(serializer.data)
+
+    # Filter all queries by tenant
+    products_qs = Productstock.objects.filter(tenant=tenant, is_deleted=False)
+
     # Total Sales: sum of all billing items' unit_total
     total_sales = (
-        BillingItem.objects.aggregate(total_sales_sum=models.Sum("unit_total"))[
-            "total_sales_sum"
-        ]
+        BillingItem.objects.filter(bill_id__tenant=tenant).aggregate(
+            total_sales_sum=models.Sum("unit_total")
+        )["total_sales_sum"]
         or 0
     )
 
     # Total Profit: sum of (unit_price - cost_price) * quantity for all billing items
     total_profit = (
-        BillingItem.objects.select_related("product_id")
+        BillingItem.objects.filter(bill_id__tenant=tenant)
+        .select_related("product_id")
         .annotate(
             profit_per_item=models.F("unit_price") - models.F("product_id__cost_price"),
             total_profit=models.ExpressionWrapper(
@@ -40,7 +83,7 @@ def dashboard_stats(request):
     now = timezone.now().date()
     # Daily
     daily_profit = (
-        BillingItem.objects.filter(bill_id__date=now)
+        BillingItem.objects.filter(bill_id__tenant=tenant, bill_id__date=now)
         .select_related("product_id")
         .annotate(
             total_profit=models.ExpressionWrapper(
@@ -57,7 +100,9 @@ def dashboard_stats(request):
     week_start = now - timedelta(days=now.weekday())
     week_end = week_start + timedelta(days=6)
     weekly_profit = (
-        BillingItem.objects.filter(bill_id__date__range=[week_start, week_end])
+        BillingItem.objects.filter(
+            bill_id__tenant=tenant, bill_id__date__range=[week_start, week_end]
+        )
         .select_related("product_id")
         .annotate(
             total_profit=models.ExpressionWrapper(
@@ -75,7 +120,7 @@ def dashboard_stats(request):
     for i in range(7):
         day = week_start + timedelta(days=i)
         day_profit = (
-            BillingItem.objects.filter(bill_id__date=day)
+            BillingItem.objects.filter(bill_id__tenant=tenant, bill_id__date=day)
             .select_related("product_id")
             .annotate(
                 total_profit=models.ExpressionWrapper(
@@ -87,7 +132,6 @@ def dashboard_stats(request):
             .aggregate(profit=models.Sum("total_profit"))["profit"]
             or 0
         )
-        # Format profit as string with 2 decimal places
         profit_str = f"{day_profit:.2f}"
         weekly_profit_by_day.append(
             {
@@ -100,7 +144,9 @@ def dashboard_stats(request):
     # Monthly (current month)
     monthly_profit = (
         BillingItem.objects.filter(
-            bill_id__date__year=now.year, bill_id__date__month=now.month
+            bill_id__tenant=tenant,
+            bill_id__date__year=now.year,
+            bill_id__date__month=now.month,
         )
         .select_related("product_id")
         .annotate(
@@ -116,7 +162,7 @@ def dashboard_stats(request):
 
     # Yearly (current year)
     yearly_profit = (
-        BillingItem.objects.filter(bill_id__date__year=now.year)
+        BillingItem.objects.filter(bill_id__tenant=tenant, bill_id__date__year=now.year)
         .select_related("product_id")
         .annotate(
             total_profit=models.ExpressionWrapper(
@@ -134,7 +180,9 @@ def dashboard_stats(request):
     for month_num in range(1, 13):
         month_profit = (
             BillingItem.objects.filter(
-                bill_id__date__year=now.year, bill_id__date__month=month_num
+                bill_id__tenant=tenant,
+                bill_id__date__year=now.year,
+                bill_id__date__month=month_num,
             )
             .select_related("product_id")
             .annotate(
@@ -155,7 +203,7 @@ def dashboard_stats(request):
     # Total Sales breakdowns
     # Daily
     daily_sales = (
-        BillingItem.objects.filter(bill_id__date=now).aggregate(
+        BillingItem.objects.filter(bill_id__tenant=tenant, bill_id__date=now).aggregate(
             sales=models.Sum("unit_total")
         )["sales"]
         or 0
@@ -164,7 +212,7 @@ def dashboard_stats(request):
     # Weekly (current week: Monday to Sunday)
     weekly_sales = (
         BillingItem.objects.filter(
-            bill_id__date__range=[week_start, week_end]
+            bill_id__tenant=tenant, bill_id__date__range=[week_start, week_end]
         ).aggregate(sales=models.Sum("unit_total"))["sales"]
         or 0
     )
@@ -174,9 +222,9 @@ def dashboard_stats(request):
     for i in range(7):
         day = week_start + timedelta(days=i)
         day_sales = (
-            BillingItem.objects.filter(bill_id__date=day).aggregate(
-                sales=models.Sum("unit_total")
-            )["sales"]
+            BillingItem.objects.filter(
+                bill_id__tenant=tenant, bill_id__date=day
+            ).aggregate(sales=models.Sum("unit_total"))["sales"]
             or 0
         )
         sales_str = f"{day_sales:.2f}"
@@ -187,16 +235,18 @@ def dashboard_stats(request):
     # Monthly (current month)
     monthly_sales = (
         BillingItem.objects.filter(
-            bill_id__date__year=now.year, bill_id__date__month=now.month
+            bill_id__tenant=tenant,
+            bill_id__date__year=now.year,
+            bill_id__date__month=now.month,
         ).aggregate(sales=models.Sum("unit_total"))["sales"]
         or 0
     )
 
     # Yearly (current year)
     yearly_sales = (
-        BillingItem.objects.filter(bill_id__date__year=now.year).aggregate(
-            sales=models.Sum("unit_total")
-        )["sales"]
+        BillingItem.objects.filter(
+            bill_id__tenant=tenant, bill_id__date__year=now.year
+        ).aggregate(sales=models.Sum("unit_total"))["sales"]
         or 0
     )
 
@@ -205,7 +255,9 @@ def dashboard_stats(request):
     for month_num in range(1, 13):
         month_sales = (
             BillingItem.objects.filter(
-                bill_id__date__year=now.year, bill_id__date__month=month_num
+                bill_id__tenant=tenant,
+                bill_id__date__year=now.year,
+                bill_id__date__month=month_num,
             ).aggregate(sales=models.Sum("unit_total"))["sales"]
             or 0
         )
@@ -216,22 +268,19 @@ def dashboard_stats(request):
 
     # Total Product Stocks: sum of all Productstock's stock (excluding deleted)
     total_stocks = (
-        Productstock.objects.filter(is_deleted=False).aggregate(
-            total_stock=models.Sum("stock")
-        )["total_stock"]
-        or 0
+        products_qs.aggregate(total_stock=models.Sum("stock"))["total_stock"] or 0
     )
 
     # Product names and stocks (excluding deleted)
-    products = Productstock.objects.filter(is_deleted=False).values(
-        "id", "name", "stock"
-    )
+    products = products_qs.values("id", "name", "stock")
     product_ids = [p["id"] for p in products]
 
     # Calculate total sold quantity per product
     sold_qty_map = {
         item["product_id"]: item["total_sold"]
-        for item in BillingItem.objects.filter(product_id__in=product_ids)
+        for item in BillingItem.objects.filter(
+            bill_id__tenant=tenant, product_id__in=product_ids
+        )
         .values("product_id")
         .annotate(total_sold=models.Sum("quantity"))
     }
@@ -247,7 +296,9 @@ def dashboard_stats(request):
 
     # Top-selling product for the week
     week_top = (
-        BillingItem.objects.filter(bill_id__date__range=[week_start, week_end])
+        BillingItem.objects.filter(
+            bill_id__tenant=tenant, bill_id__date__range=[week_start, week_end]
+        )
         .values("product_id")
         .annotate(total_sold=models.Sum("quantity"))
         .order_by("-total_sold")
@@ -255,9 +306,7 @@ def dashboard_stats(request):
     )
     week_top_product = None
     if week_top:
-        product = Productstock.objects.filter(
-            id=week_top["product_id"], is_deleted=False
-        ).first()
+        product = products_qs.filter(id=week_top["product_id"]).first()
         if product:
             week_top_product = {
                 "product_name": product.name,
@@ -268,7 +317,9 @@ def dashboard_stats(request):
     # Top-selling product for the month
     month_top = (
         BillingItem.objects.filter(
-            bill_id__date__year=now.year, bill_id__date__month=now.month
+            bill_id__tenant=tenant,
+            bill_id__date__year=now.year,
+            bill_id__date__month=now.month,
         )
         .values("product_id")
         .annotate(total_sold=models.Sum("quantity"))
@@ -277,9 +328,7 @@ def dashboard_stats(request):
     )
     month_top_product = None
     if month_top:
-        product = Productstock.objects.filter(
-            id=month_top["product_id"], is_deleted=False
-        ).first()
+        product = products_qs.filter(id=month_top["product_id"]).first()
         if product:
             month_top_product = {
                 "product_name": product.name,
@@ -289,7 +338,7 @@ def dashboard_stats(request):
 
     # Top-selling product for the year
     year_top = (
-        BillingItem.objects.filter(bill_id__date__year=now.year)
+        BillingItem.objects.filter(bill_id__tenant=tenant, bill_id__date__year=now.year)
         .values("product_id")
         .annotate(total_sold=models.Sum("quantity"))
         .order_by("-total_sold")
@@ -297,9 +346,7 @@ def dashboard_stats(request):
     )
     year_top_product = None
     if year_top:
-        product = Productstock.objects.filter(
-            id=year_top["product_id"], is_deleted=False
-        ).first()
+        product = products_qs.filter(id=year_top["product_id"]).first()
         if product:
             year_top_product = {
                 "product_name": product.name,
@@ -329,4 +376,4 @@ def dashboard_stats(request):
         "year_top_product": year_top_product,
     }
     serializer = DashboardStatsSerializer(data)
-    return JsonResponse(serializer.data)
+    return Response(serializer.data)

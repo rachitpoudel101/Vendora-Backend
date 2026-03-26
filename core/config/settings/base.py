@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
+    "core.apps.tenants",
     "core.apps.users",
     "core.apps.inventory",
     "core.apps.billing",
@@ -69,6 +70,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.apps.tenants.middleware.TenantMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"

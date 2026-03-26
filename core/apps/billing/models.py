@@ -12,6 +12,14 @@ class Bill(models.Model):
         CASH = "cash"
         ONLINE = "online"
 
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="bills",
+        null=True,
+        blank=True,
+        help_text="Tenant this bill belongs to",
+    )
     customer_Name = models.CharField(max_length=50, default=None)
     date = models.DateField(auto_now_add=True)
     payment_method = models.CharField(max_length=50, choices=PaymentChoices.choices)
