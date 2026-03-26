@@ -23,13 +23,17 @@ class TenantMiddleware(MiddlewareMixin):
     def process_view(self, request, view_func, view_args, view_kwargs):
         """Set tenant from authenticated user if not already set"""
         # If tenant not set from URL/subdomain, try to get from authenticated user
-        if (
-            not request.tenant
-            and hasattr(request, "user")
-            and request.user
-            and request.user.is_authenticated
-        ):
-            request.tenant = getattr(request.user, "tenant", None)
+        if not request.tenant and hasattr(request, "user") and request.user:
+            if request.user.is_authenticated:
+                # Get tenant from authenticated user
+                user_tenant = getattr(request.user, "tenant", None)
+                if user_tenant:
+                    request.tenant = user_tenant
+                # For superusers without a tenant, allow access to all data
+                elif request.user.is_superuser or getattr(request.user, "is_super", False):
+                    request.tenant = None  # Superusers can access without tenant restriction
+                else:
+                    request.tenant = None
 
         return None
 

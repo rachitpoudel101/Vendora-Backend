@@ -6,7 +6,7 @@ from core.apps.tenants.models import Tenant
 
 class UserCreateSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=True)
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, required=False)
     email = serializers.EmailField(required=True)
     tenant = serializers.PrimaryKeyRelatedField(
         queryset=Tenant.objects.all(),

@@ -23,24 +23,25 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter users by current tenant"""
         user = self.request.user
-        tenant = getattr(self.request, "tenant", None)
-
+        tenant = getattr(self.request, 'tenant', None)
+        
         # If no tenant from middleware, try to get from user
         if not tenant and user and hasattr(user, "tenant"):
             tenant = user.tenant
-
+        
         queryset = Users.objects.filter(is_super=False, is_deleted=False)
-
-        # Superusers can see all users from all tenants
-        if user.is_super or user.is_superuser:
+        
+        # Superusers can see all users
+        is_super = user.is_superuser or getattr(user, "is_super", False)
+        if is_super:
             return queryset
-
-        # Regular users see only users from their tenant
+        
+        # Regular users see only their tenant's users
         if tenant:
             queryset = queryset.filter(tenant=tenant)
         else:
             queryset = queryset.none()
-
+        
         if not user.is_super:
             queryset = queryset.filter(is_super=False)
         if user.role == "admin":
@@ -55,21 +56,45 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_deleted = True
-        instance.save()
+        current_user = request.user
+        
+        # Check permissions
+        is_super = current_user.is_superuser or getattr(current_user, "is_super", False)
+        
+        # Superusers can delete anyone
+        if is_super:
+            instance.is_deleted = True
+            instance.save()
+            return Response(
+                {"detail": "User soft deleted (is_deleted=True)"},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        
+        # Admins can delete staff users in their tenant
+        if current_user.role == "admin":
+            # Check if target user is in same tenant
+            if hasattr(current_user, "tenant") and hasattr(instance, "tenant"):
+                if current_user.tenant == instance.tenant and instance.role == "staff":
+                    instance.is_deleted = True
+                    instance.save()
+                    return Response(
+                        {"detail": "User soft deleted (is_deleted=True)"},
+                        status=status.HTTP_204_NO_CONTENT,
+                    )
+        
         return Response(
-            {"detail": "User soft deleted (is_deleted=True)"},
-            status=status.HTTP_204_NO_CONTENT,
+            {"error": "You don't have permission to delete this user"},
+            status=status.HTTP_403_FORBIDDEN,
         )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
-
-        # Use provided tenant or fall back to request tenant
-        tenant = validated_data.get("tenant") or getattr(request, "tenant", None)
-
+        tenant = getattr(request, 'tenant', None)
+        if not tenant and request.user and hasattr(request.user, "tenant"):
+            tenant = request.user.tenant
+        
         user = Users.objects.create_user(
             username=validated_data["username"],
             role=validated_data["role"],
@@ -211,6 +236,7 @@ class UserRestoreAPIView(APIView):
             )
 
 
+
 class ChangePasswordAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -237,46 +263,33 @@ class ChangePasswordAPIView(APIView):
 
         # Check permissions
         if user_id is not None:  # Admin changing someone else's password
-            # Superadmin can change anyone's password
-            if current_user.is_superuser or current_user.is_super:
-                pass  # Allowed
-            # Tenant admin can change password for staff and themselves
-            elif current_user.role == "admin" and current_user.tenant:
-                if target_user.id == current_user.id:
-                    pass  # Admin changing own password
-                elif (
-                    target_user.role == "staff"
-                    and target_user.tenant == current_user.tenant
-                ):
-                    pass  # Admin changing staff password in same tenant
-                else:
+            is_super = getattr(current_user, "is_superuser", False) or getattr(
+                current_user, "is_super", False
+            )
+            if not is_super and current_user.id != user_id:
+                # Check if admin can change this user's password
+                if current_user.role != "admin" or target_user.role == "admin":
                     return Response(
-                        {
-                            "error": "You don't have permission to change this user's password"
-                        },
+                        {"error": "You don't have permission to change this user's password"},
                         status=status.HTTP_403_FORBIDDEN,
                     )
-            else:
-                return Response(
-                    {
-                        "error": "You don't have permission to change this user's password"
-                    },
-                    status=status.HTTP_403_FORBIDDEN,
-                )
 
-        new_password = request.data.get("password")
+        # Get new password from request
+        new_password = request.data.get("new_password")
         if not new_password:
             return Response(
-                {"error": "Password is required"},
+                {"error": "new_password is required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Validate password strength (optional)
         if len(new_password) < 8:
             return Response(
                 {"error": "Password must be at least 8 characters long"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Set new password
         target_user.set_password(new_password)
         target_user.save()
 

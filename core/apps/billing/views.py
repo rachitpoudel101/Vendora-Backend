@@ -10,23 +10,23 @@ from core.apps.users.permissions.permissions import IsAdmin, Isstaff, IsSuperAdm
 class BillViewSet(viewsets.ModelViewSet):
     queryset = Bill.objects.all()
     serializer_class = BillSerializer
-    permission_classes = [IsAuthenticated, IsSuperAdmin | IsAdmin | Isstaff]
+    permission_classes = [ IsSuperAdmin | IsAdmin | Isstaff]
 
     def get_queryset(self):
         """Filter bills by current tenant"""
-        tenant = getattr(self.request, "tenant", None)
-
+        tenant = getattr(self.request, 'tenant', None)
+        
         # If no tenant from middleware, try to get from user
         if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
             tenant = self.request.user.tenant
-
+        
         if tenant:
             return Bill.objects.filter(tenant=tenant)
         return Bill.objects.none()
 
     def perform_create(self, serializer):
         """Set tenant when creating bill"""
-        tenant = getattr(self.request, "tenant", None)
+        tenant = getattr(self.request, 'tenant', None)
         if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
             tenant = self.request.user.tenant
         serializer.save(tenant=tenant)
@@ -39,9 +39,10 @@ class BillViewSet(viewsets.ModelViewSet):
 
         from core.apps.billing.models import BillingItem
 
-        tenant = getattr(request, "tenant", None)
+        tenant = getattr(request, 'tenant', None)
         if not tenant and request.user and hasattr(request.user, "tenant"):
             tenant = request.user.tenant
+        
         bill = Bill.objects.create(tenant=tenant, **validated_data)
         for item_data in items_data:
             product = item_data["product_id"]
