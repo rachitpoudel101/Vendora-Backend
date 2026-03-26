@@ -1,5 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from core.apps.billing.models import Bill
 from core.apps.billing.serializers.serializers import BillSerializer
@@ -9,7 +10,26 @@ from core.apps.users.permissions.permissions import IsAdmin, Isstaff, IsSuperAdm
 class BillViewSet(viewsets.ModelViewSet):
     queryset = Bill.objects.all()
     serializer_class = BillSerializer
-    permission_classes = [IsSuperAdmin | IsAdmin | Isstaff]
+    permission_classes = [IsAuthenticated, IsSuperAdmin | IsAdmin | Isstaff]
+
+    def get_queryset(self):
+        """Filter bills by current tenant"""
+        tenant = getattr(self.request, "tenant", None)
+
+        # If no tenant from middleware, try to get from user
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+
+        if tenant:
+            return Bill.objects.filter(tenant=tenant)
+        return Bill.objects.none()
+
+    def perform_create(self, serializer):
+        """Set tenant when creating bill"""
+        tenant = getattr(self.request, "tenant", None)
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+        serializer.save(tenant=tenant)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -19,7 +39,10 @@ class BillViewSet(viewsets.ModelViewSet):
 
         from core.apps.billing.models import BillingItem
 
-        bill = Bill.objects.create(**validated_data)
+        tenant = getattr(request, "tenant", None)
+        if not tenant and request.user and hasattr(request.user, "tenant"):
+            tenant = request.user.tenant
+        bill = Bill.objects.create(tenant=tenant, **validated_data)
         for item_data in items_data:
             product = item_data["product_id"]
             quantity = item_data["quantity"]

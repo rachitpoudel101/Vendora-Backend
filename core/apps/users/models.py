@@ -8,6 +8,14 @@ class Users(AbstractUser):
         STAFF = "staff"
         # CUSTOMER = "customer"
 
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="users",
+        null=True,
+        blank=True,
+        help_text="Tenant this user belongs to",
+    )
     role = models.CharField(max_length=50, choices=RolesChoices.choices)
     is_super = models.BooleanField(default=False)
     created_by = models.ForeignKey(

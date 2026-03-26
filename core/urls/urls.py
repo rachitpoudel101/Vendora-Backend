@@ -29,9 +29,11 @@ from core.urls.urls_billing import urlpatterns as billing_partterns
 from core.urls.urls_dashboard import urlpatterns as dashboard_patterns
 from core.urls.urls_users import urlpatterns as users_patterns
 from core.urls.urls_vendors import urlpatterns as vendor_patterns
+from core.urls.urls_tenants import urlpatterns as tenants_patterns
 
 urlpatterns = [
     # path('admin/', admin.site.urls),
+    path("", include(tenants_patterns)),
     path("", include(users_patterns)),
     path("", include(inventory_patterns)),
     path("", include(billing_partterns)),

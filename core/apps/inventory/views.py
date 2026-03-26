@@ -1,6 +1,7 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from core.apps.inventory.models import (
     Category,
@@ -25,23 +26,38 @@ class UnitTypeViewSet(viewsets.ModelViewSet):
 
     queryset = UnitType.objects.filter(is_deleted=False)
     serializer_class = UnitTypeSerializer
-    permission_classes = [IsSuperAdmin | IsAdmin]
+    permission_classes = [IsAuthenticated, IsSuperAdmin | IsAdmin]
+
+    def get_queryset(self):
+        """Filter units by current tenant"""
+        queryset = super().get_queryset()
+        tenant = getattr(self.request, "tenant", None)
+
+        # If no tenant from middleware, try to get from user
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+
+        if tenant:
+            queryset = queryset.filter(tenant=tenant)
+        else:
+            queryset = queryset.none()
+
+        unit = self.request.query_params.get("unit")
+        if unit:
+            queryset = queryset.filter(unit__icontains=unit)
+        return queryset
+
+    def perform_create(self, serializer):
+        """Set tenant when creating unit"""
+        tenant = getattr(self.request, "tenant", None)
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+        serializer.save(tenant=tenant)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.soft_delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def get_queryset(self):
-        """
-        Optionally filter units by unit name.
-        Example: /units/?unit=kg
-        """
-        queryset = super().get_queryset()
-        unit = self.request.query_params.get("unit")
-        if unit:
-            queryset = queryset.filter(unit__icontains=unit)
-        return queryset
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -52,25 +68,40 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
     queryset = Category.objects.filter(is_deleted=False)
     serializer_class = CategorySerializer
-    permission_classes = [IsSuperAdmin | IsAdmin]
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.soft_delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    permission_classes = [IsAuthenticated, IsSuperAdmin | IsAdmin]
 
     def get_queryset(self):
-        """
-        Optionally filter categories by supliers or expired_applicable flag.
-        Example: /api/categories/?is_expired_applicable=true
-        """
+        """Filter categories by current tenant"""
         queryset = super().get_queryset()
+        tenant = getattr(self.request, "tenant", None)
+
+        # If no tenant from middleware, try to get from user
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+
+        if tenant:
+            queryset = queryset.filter(tenant=tenant)
+        else:
+            queryset = queryset.none()
+
         is_expired_applicable = self.request.query_params.get("is_expired_applicable")
         if is_expired_applicable is not None:
             queryset = queryset.filter(
                 is_expired_applicable=is_expired_applicable.lower() == "true"
             )
         return queryset
+
+    def perform_create(self, serializer):
+        """Set tenant when creating category"""
+        tenant = getattr(self.request, "tenant", None)
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+        serializer.save(tenant=tenant)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -81,19 +112,22 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     queryset = Productstock.objects.filter(is_deleted=False)
     serializer_class = ProductStockSerializer
-    permission_classes = [IsSuperAdmin | IsAdmin]
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.soft_delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    permission_classes = [IsAuthenticated, IsSuperAdmin | IsAdmin]
 
     def get_queryset(self):
-        """
-        Optionally filter products by category or supliers.
-        Example: /api/products/?category=1&supliers=2
-        """
+        """Filter products by current tenant"""
         queryset = super().get_queryset()
+        tenant = getattr(self.request, "tenant", None)
+
+        # If no tenant from middleware, try to get from user
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+
+        if tenant:
+            queryset = queryset.filter(tenant=tenant)
+        else:
+            queryset = queryset.none()
+
         category = self.request.query_params.get("category")
         supliers = self.request.query_params.get("supliers")
 
@@ -103,6 +137,18 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(supliers_id=supliers)
 
         return queryset
+
+    def perform_create(self, serializer):
+        """Set tenant when creating product"""
+        tenant = getattr(self.request, "tenant", None)
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+        serializer.save(tenant=tenant)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["post"], url_path="validate")
     def validate_product(self, request, pk=None):
@@ -175,19 +221,22 @@ class UnitTypeConfigurationsViewSet(viewsets.ModelViewSet):
 
     queryset = UnitTypeConfigurations.objects.filter(is_deleted=False)
     serializer_class = UnitTypeConfigurationsSerializer
-    permission_classes = [IsSuperAdmin | IsAdmin]
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.soft_delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    permission_classes = [IsAuthenticated, IsSuperAdmin | IsAdmin]
 
     def get_queryset(self):
-        """
-        Optionally filter configurations by product or unit type.
-        Example: /api/unit-configurations/?product=1&unit_type=2
-        """
+        """Filter configurations by current tenant"""
         queryset = super().get_queryset()
+        tenant = getattr(self.request, "tenant", None)
+
+        # If no tenant from middleware, try to get from user
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+
+        if tenant:
+            queryset = queryset.filter(tenant=tenant)
+        else:
+            queryset = queryset.none()
+
         product = self.request.query_params.get("product")
         unit_type = self.request.query_params.get("unit_type")
 
@@ -197,3 +246,15 @@ class UnitTypeConfigurationsViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(unit_type_id=unit_type)
 
         return queryset
+
+    def perform_create(self, serializer):
+        """Set tenant when creating configuration"""
+        tenant = getattr(self.request, "tenant", None)
+        if not tenant and self.request.user and hasattr(self.request.user, "tenant"):
+            tenant = self.request.user.tenant
+        serializer.save(tenant=tenant)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

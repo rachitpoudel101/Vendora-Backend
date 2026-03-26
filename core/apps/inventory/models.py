@@ -7,6 +7,14 @@ from core.apps.Supliers.models import Supliers
 
 
 class UnitType(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="unit_types",
+        null=True,
+        blank=True,
+        help_text="Tenant this unit type belongs to",
+    )
     unit = models.CharField(
         max_length=15, help_text="Name of the unit, e.g., 'Piece', 'Box', 'Carton'."
     )
@@ -18,15 +26,16 @@ class UnitType(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # If a deleted unit with the same name exists, reactivate it
         if self.pk is None:
-            existing = UnitType.objects.filter(unit=self.unit, is_deleted=True).first()
+            existing = UnitType.objects.filter(
+                unit=self.unit, is_deleted=True, tenant=self.tenant
+            ).first()
             if existing:
                 existing.is_deleted = False
                 existing.save()
-                self.pk = existing.pk  # Use the reactivated unit's pk
+                self.pk = existing.pk
                 self.is_deleted = False
-                return  # Do not create a new row, just update the old one
+                return
             self.is_deleted = False
         super().save(*args, **kwargs)
 
@@ -45,6 +54,14 @@ class Category(models.Model):
     class Meta:
         db_table = "category"
 
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="categories",
+        null=True,
+        blank=True,
+        help_text="Tenant this category belongs to",
+    )
     name = models.CharField(max_length=100, help_text="Name of the category.")
     is_expired_applicable = models.BooleanField(
         default=False, help_text="Does this category require expiry dates?"
@@ -65,6 +82,14 @@ class Productstock(models.Model):
     class Meta:
         db_table = "product_stock"
 
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="products",
+        null=True,
+        blank=True,
+        help_text="Tenant this product belongs to",
+    )
     unit = models.ForeignKey(
         UnitType,
         on_delete=models.CASCADE,
@@ -145,6 +170,14 @@ class UnitTypeConfigurations(models.Model):
     class Meta:
         db_table = "unit_configurations"
 
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="unit_configurations",
+        null=True,
+        blank=True,
+        help_text="Tenant this configuration belongs to",
+    )
     product = models.ForeignKey(
         Productstock,
         on_delete=models.CASCADE,

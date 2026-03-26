@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from core.apps.users.views import (
+    ChangePasswordAPIView,
     LogoutView,
     RoleConfigView,
     SelfDetails,
@@ -25,4 +26,10 @@ urlpatterns = [
     ),
     path("role-config/", RoleConfigView.as_view(), name="role-config"),
     path("restore/<int:user_id>/", UserRestoreAPIView.as_view(), name="user-restore"),
+    path("change-password/", ChangePasswordAPIView.as_view(), name="change-password"),
+    path(
+        "change-password/<int:user_id>/",
+        ChangePasswordAPIView.as_view(),
+        name="change-password-user",
+    ),
 ]

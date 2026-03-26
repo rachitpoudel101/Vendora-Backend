@@ -17,12 +17,30 @@ from core.apps.users.serializers.serializers import (
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsSuperAdmin | IsAdmin, IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSuperAdmin | IsAdmin]
     serializer_class = UserCreateSerializer
 
     def get_queryset(self):
+        """Filter users by current tenant"""
         user = self.request.user
+        tenant = getattr(self.request, "tenant", None)
+
+        # If no tenant from middleware, try to get from user
+        if not tenant and user and hasattr(user, "tenant"):
+            tenant = user.tenant
+
         queryset = Users.objects.filter(is_super=False, is_deleted=False)
+
+        # Superusers can see all users from all tenants
+        if user.is_super or user.is_superuser:
+            return queryset
+
+        # Regular users see only users from their tenant
+        if tenant:
+            queryset = queryset.filter(tenant=tenant)
+        else:
+            queryset = queryset.none()
+
         if not user.is_super:
             queryset = queryset.filter(is_super=False)
         if user.role == "admin":
@@ -48,12 +66,17 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
+
+        # Use provided tenant or fall back to request tenant
+        tenant = validated_data.get("tenant") or getattr(request, "tenant", None)
+
         user = Users.objects.create_user(
             username=validated_data["username"],
             role=validated_data["role"],
             email=validated_data.get("email", ""),
             first_name=validated_data.get("first_name", ""),
             last_name=validated_data.get("last_name", ""),
+            tenant=tenant,
         )
         user.set_password(validated_data.get("password"))
         if user.role == Users.RolesChoices.STAFF:
@@ -186,3 +209,78 @@ class UserRestoreAPIView(APIView):
                 {"error": "User not found or not deleted"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+
+class ChangePasswordAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id=None):
+        """
+        Change password for a user.
+        - Superadmin: can change password for any user
+        - Tenant admin: can change password for themselves and staff in their tenant
+        - Normal user: can only change their own password
+        """
+        current_user = request.user
+
+        # If no user_id provided, user is changing their own password
+        if user_id is None:
+            target_user = current_user
+        else:
+            try:
+                target_user = Users.objects.get(id=user_id)
+            except Users.DoesNotExist:
+                return Response(
+                    {"error": "User not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        # Check permissions
+        if user_id is not None:  # Admin changing someone else's password
+            # Superadmin can change anyone's password
+            if current_user.is_superuser or current_user.is_super:
+                pass  # Allowed
+            # Tenant admin can change password for staff and themselves
+            elif current_user.role == "admin" and current_user.tenant:
+                if target_user.id == current_user.id:
+                    pass  # Admin changing own password
+                elif (
+                    target_user.role == "staff"
+                    and target_user.tenant == current_user.tenant
+                ):
+                    pass  # Admin changing staff password in same tenant
+                else:
+                    return Response(
+                        {
+                            "error": "You don't have permission to change this user's password"
+                        },
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+            else:
+                return Response(
+                    {
+                        "error": "You don't have permission to change this user's password"
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        new_password = request.data.get("password")
+        if not new_password:
+            return Response(
+                {"error": "Password is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {"error": "Password must be at least 8 characters long"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        target_user.set_password(new_password)
+        target_user.save()
+
+        return Response(
+            {"message": "Password changed successfully"},
+            status=status.HTTP_200_OK,
+        )
