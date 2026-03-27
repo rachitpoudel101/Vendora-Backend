@@ -23,25 +23,25 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter users by current tenant"""
         user = self.request.user
-        tenant = getattr(self.request, 'tenant', None)
-        
+        tenant = getattr(self.request, "tenant", None)
+
         # If no tenant from middleware, try to get from user
         if not tenant and user and hasattr(user, "tenant"):
             tenant = user.tenant
-        
+
         queryset = Users.objects.filter(is_super=False, is_deleted=False)
-        
+
         # Superusers can see all users
         is_super = user.is_superuser or getattr(user, "is_super", False)
         if is_super:
             return queryset
-        
+
         # Regular users see only their tenant's users
         if tenant:
             queryset = queryset.filter(tenant=tenant)
         else:
             queryset = queryset.none()
-        
+
         if not user.is_super:
             queryset = queryset.filter(is_super=False)
         if user.role == "admin":
@@ -57,10 +57,10 @@ class UserViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         current_user = request.user
-        
+
         # Check permissions
         is_super = current_user.is_superuser or getattr(current_user, "is_super", False)
-        
+
         # Superusers can delete anyone
         if is_super:
             instance.is_deleted = True
@@ -69,7 +69,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 {"detail": "User soft deleted (is_deleted=True)"},
                 status=status.HTTP_204_NO_CONTENT,
             )
-        
+
         # Admins can delete staff users in their tenant
         if current_user.role == "admin":
             # Check if target user is in same tenant
@@ -81,7 +81,7 @@ class UserViewSet(viewsets.ModelViewSet):
                         {"detail": "User soft deleted (is_deleted=True)"},
                         status=status.HTTP_204_NO_CONTENT,
                     )
-        
+
         return Response(
             {"error": "You don't have permission to delete this user"},
             status=status.HTTP_403_FORBIDDEN,
@@ -91,10 +91,10 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
-        tenant = getattr(request, 'tenant', None)
+        tenant = getattr(request, "tenant", None)
         if not tenant and request.user and hasattr(request.user, "tenant"):
             tenant = request.user.tenant
-        
+
         user = Users.objects.create_user(
             username=validated_data["username"],
             role=validated_data["role"],
@@ -236,7 +236,6 @@ class UserRestoreAPIView(APIView):
             )
 
 
-
 class ChangePasswordAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -270,7 +269,9 @@ class ChangePasswordAPIView(APIView):
                 # Check if admin can change this user's password
                 if current_user.role != "admin" or target_user.role == "admin":
                     return Response(
-                        {"error": "You don't have permission to change this user's password"},
+                        {
+                            "error": "You don't have permission to change this user's password"
+                        },
                         status=status.HTTP_403_FORBIDDEN,
                     )
 

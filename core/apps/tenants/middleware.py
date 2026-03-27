@@ -30,8 +30,12 @@ class TenantMiddleware(MiddlewareMixin):
                 if user_tenant:
                     request.tenant = user_tenant
                 # For superusers without a tenant, allow access to all data
-                elif request.user.is_superuser or getattr(request.user, "is_super", False):
-                    request.tenant = None  # Superusers can access without tenant restriction
+                elif request.user.is_superuser or getattr(
+                    request.user, "is_super", False
+                ):
+                    request.tenant = (
+                        None  # Superusers can access without tenant restriction
+                    )
                 else:
                     request.tenant = None
 

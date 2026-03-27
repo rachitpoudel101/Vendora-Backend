@@ -30,6 +30,7 @@ from core.urls.urls_dashboard import urlpatterns as dashboard_patterns
 from core.urls.urls_users import urlpatterns as users_patterns
 from core.urls.urls_vendors import urlpatterns as vendor_patterns
 from core.urls.urls_tenants import urlpatterns as tenants_patterns
+from core.apps.themes.urls import urlpatterns as themes_patterns
 
 urlpatterns = [
     # path('admin/', admin.site.urls),
@@ -39,6 +40,7 @@ urlpatterns = [
     path("", include(billing_partterns)),
     path("", include(dashboard_patterns)),
     path("", include(vendor_patterns)),
+    path("", include(themes_patterns)),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
