@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "core.apps.notifications",
     "core.apps.dashboard",
     "core.apps.Supliers",
+    "core.apps.themes",
 ]
 
 MIDDLEWARE = [
